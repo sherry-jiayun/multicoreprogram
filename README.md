@@ -1,0 +1,2 @@
+# multicoreprogram
+Multicore programe project
