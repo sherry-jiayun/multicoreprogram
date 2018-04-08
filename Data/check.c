@@ -3,6 +3,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+/***
+在头文件里引用 "loadgraph.h"
+用下面这一段当作main函数
+运行的时候使用 ./可执行文件 node数目 模式(m for matrix l for adj list)
+matrix 是 numOfNode * numOfNode的数组
+adj 单向list 结构如下
+typedef struct edge
+{
+  int nodefrom;
+  int nodeto;
+  int weight;
+  struct edge * nextedge;
+}Edge;
+
+typedef struct node
+{
+  int nodeNum;
+  Edge * edgehead;
+}Node;
+***/
 int main(int argc, char *argv[])    
 {
 	int numOfNode;
@@ -23,7 +43,7 @@ int main(int argc, char *argv[])
 		mode = argv[3];
 		int result = strcmp(mode_matrix,mode);
 		if (result == 0){
-			int **graphmatric;
+			int **graphmatric; // numOfNode * numOfNode matrix 
 			graphmatric = malloc(numOfNode * sizeof *graphmatric);
 			for (;index < numOfNode;index++){
 			graphmatric[index] = malloc(numOfNode * sizeof(int));
@@ -40,18 +60,18 @@ int main(int argc, char *argv[])
 		}else{
 			result = strcmp(mode_adjlist,mode);
 			if (result == 0){
-				Node nodelist[numOfNode];
+				Node nodelist[numOfNode]; // number of node array
 				createAdjList(nameOfFile,numOfNode,(Node *)&nodelist);
-				for (int i = 0; i < 1; i++){
-				Node ntmp = (Node)nodelist[i];
-				Edge *etmp = (Edge *)ntmp.edgehead;
-				printf("Node num: %d\n", ntmp.nodeNum);
-				// printf("[from: %d to: %d weight: %d \n",ntmp.edgehead->nodefrom,ntmp.edgehead->nodeto,ntmp.edgehead->weight );
-				while (etmp != NULL){
-				printf("[from: %d to: %d weight: %d \t",etmp->nodefrom,etmp->nodeto,etmp->weight );
-				etmp = etmp->nextedge;
-				}
-				printf("\n");
+				// loop to go through all list 
+				for (int i = 0; i < nodeNum; i++){
+					Node ntmp = (Node)nodelist[i];
+					Edge *etmp = (Edge *)ntmp.edgehead;
+					printf("Node num: %d\n", ntmp.nodeNum);
+					while (etmp != NULL){
+						printf("[from: %d to: %d weight: %d \t",etmp->nodefrom,etmp->nodeto,etmp->weight );
+						etmp = etmp->nextedge;
+					}
+					printf("\n");
 				}
 			}else{
 				printf("Illegal mode!\n");
