@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 
 /***
 在头文件里引用 "loadgraph.h"
@@ -25,52 +24,6 @@ typedef struct node
 }Node;
 ***/
 
-int shortestvertex(int *distance, int *connection, int numOfNode){
-	int index = 0;
-	int min = INFINITY;
-	for(int i = 0; i < numOfNode; i++){
-		if(connection[i] == 0 && distance[i] < min){
-			min = distance[i];
-			index = i;
-		}
-	}
-	return index;
-}
-
-void dijkstra(int **graphmatric, int numOfNode){
-    //an array to set original distance from single scource to every vertics
-    int *distance;
-    distance = malloc(numOfNode * sizeof(int));
-    distance[0] = 0;
-    for(int i = 1; i < numOfNode; i++){
-    	distance[i] = INFINITY;
-    }
-
-    int *connection;
-    connection = malloc(numOfNode * sizeof(int));
-    for(int i = 0; i < numOfNode; i ++){
-    	connection[i] = 0;
-    }
-
-    for(int i = 0; i < numOfNode; i++){
-    	int nextV = shortestvertex(distance, connection, numOfNode);
-    	connection[nextV] = 1;
-
-    	for(int j = 0; j < numOfNode; j++){
-    		if(connection[j] == 0 && graphmatric[i][j] > 0 && 
-    			distance[i] + graphmatric[i][j] < distance[j]){
-    			distance[j] = distance[i] + graphmatric[i][j];
-    		}
-    	}
-    }
-
-    // print the distances
-    for(int i = 0; i < numOfNode; i++){
-    	printf("%d\n", distance[i]);
-    }
-    free(distance);
-    free(connection);
-}
 
 int main(int argc, char *argv[])    
 {
@@ -105,7 +58,6 @@ int main(int argc, char *argv[])
 				}
 				printf("\n");
 			}
-			dijkstra(graphmatric, numOfNode);
 			free(graphmatric);
 		}else{
 			result = strcmp(mode_adjlist,mode);
