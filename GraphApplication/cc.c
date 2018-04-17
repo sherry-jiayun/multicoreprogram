@@ -24,6 +24,7 @@ typedef struct node
 }Node;
 ***/
 void connectedComponents_m(int **graphmatric, int numOfNode);
+void connectedComponents_a(Node *nodelist, int numOfNode);
 
 // A structure to represent a queue
 struct Queue
@@ -31,6 +32,7 @@ struct Queue
     int front, rear, size;
     unsigned capacity;
     int* array;
+    Node* nodes;
 };
  
 // function to create a queue of given capacity. 
@@ -42,6 +44,7 @@ struct Queue* createQueue(unsigned capacity)
     queue->front = queue->size = 0; 
     queue->rear = capacity - 1;  // This is important, see the enqueue
     queue->array = (int*) malloc(queue->capacity * sizeof(int));
+    queue->nodes = (Node*) malloc(queue->capacity * sizeof(Node));
     return queue;
 }
  
@@ -64,6 +67,16 @@ void enqueue(struct Queue* queue, int item)
     queue->size = queue->size + 1;
     printf("%d enqueued to queue\n", item);
 }
+
+//Function to add a node to the queue
+void enqueueNode(struct Queue* queue, Node item) {
+	if (isFull(queue))
+        return;
+    queue->rear = (queue->rear + 1)%queue->capacity;
+    queue->nodes[queue->rear] = item;
+    queue->size = queue->size + 1;
+    //printf("%d enqueued to queue\n", item);
+}
  
 // Function to remove an item from queue. 
 // It changes front and size
@@ -74,6 +87,20 @@ int dequeue(struct Queue* queue)
     int item = queue->array[queue->front];
     queue->front = (queue->front + 1)%queue->capacity;
     queue->size = queue->size - 1;
+    return item;
+}
+
+//Function to remove a node from queue
+Node* dequeueNode(struct Queue* queue)
+{
+    if (isEmpty(queue)) {
+        printf("Error: queue is empty when try to dequeue");
+        return NULL;
+    }
+    Node node = queue->nodes[queue->front];
+    queue->front = (queue->front + 1)%queue->capacity;
+    queue->size = queue->size - 1;
+    Node* item = &node;
     return item;
 }
  
@@ -125,7 +152,7 @@ int main(int argc, char *argv[]) {
 				}
 				printf("\n");
 			}
-			connectedComponents_m(graphmatric, numOfNode);
+			//connectedComponents_m(graphmatric, numOfNode);
 			free(graphmatric);
 		} else {
 			result = strcmp(mode_adjlist, mode);
@@ -165,7 +192,6 @@ void connectedComponents_m(int **graphmatric, int numOfNode) {
 	int j;
 
 	//initialization
-	groupNum = 0;
 	for (i = 0; i < numOfNode; i++) {
 		visited[i] = 0;
 		groupIndex[i] = -1;
@@ -175,6 +201,7 @@ void connectedComponents_m(int **graphmatric, int numOfNode) {
 			groups[i][j] = -1;
 		}
 	}
+	groupNum = 0;
 	groups[groupNum][0] = 0;
 	groupIndex[0] = groupNum;
 
@@ -203,6 +230,61 @@ void connectedComponents_m(int **graphmatric, int numOfNode) {
 					groupIndex[i] = groupNum;
 				}
 			}
+		}
+	}
+}
+
+void connectedComponents_a(Node *nodelist, int numOfNode) {
+	struct Queue* queue = createQueue(numOfNode);
+	int groups[numOfNode][numOfNode];
+	int groupIndex[numOfNode];
+	int visited[numOfNode];
+	int groupNum;
+	int i;
+	int j;
+
+	//initialization
+	for (i = 0; i < numOfNode; i++) {
+		visited[i] = 0;
+		groupIndex[i] = -1;
+	}
+	for (i = 0; i < numOfNode; i++) {
+		for (j = 0; j < numOfNode; j++) {
+			groups[i][j] = -1;
+		}
+	}
+
+	Node start = (Node) nodelist[0];
+	groupNum = 0;
+	groups[groupNum][0] = start.nodeNum;
+	groupIndex[start.nodeNum] = groupNum;
+
+	//BFS
+	enqueueNode(queue, start);
+	visited[start.nodeNum] = 1;
+	while (!isEmpty(queue)) {
+		Node current = *dequeueNode(queue);
+		Edge *nextEdge = current.edgehead;
+		while (nextEdge != NULL) {
+			Node nextNode = nodelist[(int)nextEdge->nodeto];
+			enqueueNode(queue, nextNode);
+			visited[nextNode.nodeNum] = 1;
+			if (groupIndex[current.nodeNum] != -1) {
+				int index = groupIndex[current.nodeNum];
+				int next = 0;
+				while (groups[index][next] != -1) {
+					next = next + 1;
+				}
+				groups[index][next] = nextNode.nodeNum;
+				groupIndex[nextNode.nodeNum] =index;
+			} else {
+				groupNum = groupNum + 1;
+				groups[groupNum][0] = current.nodeNum;
+				groupIndex[current.nodeNum] = groupNum;
+				groups[groupNum][1] = nextNode.nodeNum;
+				groupIndex[nextNode.nodeNum] = groupNum;
+			}
+			nextEdge = nextEdge->nextedge;
 		}
 	}
 }
