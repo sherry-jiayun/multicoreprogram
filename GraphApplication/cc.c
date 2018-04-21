@@ -75,7 +75,7 @@ void enqueueNode(struct Queue* queue, Node item) {
     queue->rear = (queue->rear + 1)%queue->capacity;
     queue->nodes[queue->rear] = item;
     queue->size = queue->size + 1;
-    //printf("%d enqueued to queue\n", item);
+    printf("%d enqueued to queue\n", item.nodeNum);
 }
  
 // Function to remove an item from queue. 
@@ -145,13 +145,13 @@ int main(int argc, char *argv[]) {
 				graphmatric[index] = malloc(numOfNode * sizeof(int));
 			}
 			creatMatric(nameOfFile,numOfNode,graphmatric);
-			for (int i = 0; i < numOfNode; i++) {
-				printf("Node No.%d\t",i);
-				for (int j = 0; j < numOfNode; j++) {
-					printf("%d  ",graphmatric[i][j]);
-				}
-				printf("\n");
-			}
+			//for (int i = 0; i < numOfNode; i++) {
+				//printf("Node No.%d\t",i);
+				//for (int j = 0; j < numOfNode; j++) {
+					//printf("%d  ",graphmatric[i][j]);
+				//}
+				//printf("\n");
+			//}
 			//connectedComponents_m(graphmatric, numOfNode);
 			free(graphmatric);
 		} else {
@@ -170,6 +170,7 @@ int main(int argc, char *argv[]) {
 					}
 					printf("\n");
 				}
+			connectedComponents_a(nodelist, numOfNode);	
 			} else {
 				printf("Illegal mode!\n");
 				return 0;
@@ -190,6 +191,7 @@ void connectedComponents_m(int **graphmatric, int numOfNode) {
 	int groupNum;
 	int i;
 	int j;
+	int node;
 
 	//initialization
 	for (i = 0; i < numOfNode; i++) {
@@ -205,32 +207,43 @@ void connectedComponents_m(int **graphmatric, int numOfNode) {
 	groups[groupNum][0] = 0;
 	groupIndex[0] = groupNum;
 
-	//BFS
-	enqueue(queue, 0);
-	visited[0] = 1;
-	while (!isEmpty(queue)) {
-		int current = dequeue(queue);
-		for (i = 0; i < numOfNode; i++) {
-			if (i != current && graphmatric[current][i] != 0 && visited[i] == 0) {
-				enqueue(queue, i);
-				visited[i] = 1;
-				if (groupIndex[current] != -1) {
-					int index = groupIndex[current];
-					int next = 0;
-					while (groups[index][next] != -1) {
-						next = next + 1;
+	for (node = 0; node < numOfNode; node++) {
+		if (!visited[i]) {
+			//BFS
+			enqueue(queue, node);
+			visited[node] = 1;
+			while (!isEmpty(queue)) {
+				int current = dequeue(queue);
+				for (i = 0; i < numOfNode; i++) {
+					if (i != current && graphmatric[current][i] != 0 && visited[i] == 0) {
+						enqueue(queue, i);
+						visited[i] = 1;
+						if (groupIndex[current] != -1) {
+							int index = groupIndex[current];
+							int next = 0;
+							while (groups[index][next] != -1) {
+								next = next + 1;
+							}
+							groups[index][next] = i;
+							groupIndex[i] =index;
+						} else {
+							groupNum = groupNum + 1;
+							groups[groupNum][0] = current;
+							groupIndex[current] = groupNum;
+							groups[groupNum][1] = i;
+							groupIndex[i] = groupNum;
+						}
 					}
-					groups[index][next] = i;
-					groupIndex[i] =index;
-				} else {
-					groupNum = groupNum + 1;
-					groups[groupNum][0] = current;
-					groupIndex[current] = groupNum;
-					groups[groupNum][1] = i;
-					groupIndex[i] = groupNum;
 				}
 			}
 		}
+	}	
+
+	for (i = 0; i < numOfNode; i++) {
+		for (j = 0; j < numOfNode; j++) {
+			printf("%d ", groups[i][j]);
+		}
+		printf("\n");
 	}
 }
 
@@ -259,32 +272,46 @@ void connectedComponents_a(Node *nodelist, int numOfNode) {
 	groups[groupNum][0] = start.nodeNum;
 	groupIndex[start.nodeNum] = groupNum;
 
-	//BFS
-	enqueueNode(queue, start);
-	visited[start.nodeNum] = 1;
-	while (!isEmpty(queue)) {
-		Node current = *dequeueNode(queue);
-		Edge *nextEdge = current.edgehead;
-		while (nextEdge != NULL) {
-			Node nextNode = nodelist[(int)nextEdge->nodeto];
-			enqueueNode(queue, nextNode);
-			visited[nextNode.nodeNum] = 1;
-			if (groupIndex[current.nodeNum] != -1) {
-				int index = groupIndex[current.nodeNum];
-				int next = 0;
-				while (groups[index][next] != -1) {
-					next = next + 1;
+	for (i = 0 ; i < numOfNode; i++) {
+		//BFS
+		start = (Node) nodelist[i];
+		if (!visited[start.nodeNum]) {
+			enqueueNode(queue, start);
+			visited[start.nodeNum] = 1;
+			while (!isEmpty(queue)) {
+				Node current = *dequeueNode(queue);
+				Edge *nextEdge = current.edgehead;
+				while (nextEdge != NULL && !visited[nextEdge->nodeto]) {
+					Node nextNode = nodelist[(int)nextEdge->nodeto];
+					if (!visited[nextNode.nodeNum]) {
+						enqueueNode(queue, nextNode);
+						visited[nextNode.nodeNum] = 1;
+						if (groupIndex[current.nodeNum] != -1) {
+							int index = groupIndex[current.nodeNum];
+							int next = 0;
+							while (groups[index][next] != -1) {
+								next = next + 1;
+							}
+							groups[index][next] = nextNode.nodeNum;
+							groupIndex[nextNode.nodeNum] =index;
+						} else {
+							groupNum = groupNum + 1;
+							groups[groupNum][0] = current.nodeNum;
+							groupIndex[current.nodeNum] = groupNum;
+							groups[groupNum][1] = nextNode.nodeNum;
+							groupIndex[nextNode.nodeNum] = groupNum;
+						}
+						nextEdge = nextEdge->nextedge;
+					}
 				}
-				groups[index][next] = nextNode.nodeNum;
-				groupIndex[nextNode.nodeNum] =index;
-			} else {
-				groupNum = groupNum + 1;
-				groups[groupNum][0] = current.nodeNum;
-				groupIndex[current.nodeNum] = groupNum;
-				groups[groupNum][1] = nextNode.nodeNum;
-				groupIndex[nextNode.nodeNum] = groupNum;
 			}
-			nextEdge = nextEdge->nextedge;
 		}
+	}
+
+	for (i = 0; i < numOfNode; i++) {
+		for (j = 0; j < numOfNode; j++) {
+			printf("%d ", groups[i][j]);
+		}
+		printf("\n");
 	}
 }
