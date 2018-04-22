@@ -1,5 +1,6 @@
 import os
 
+# change direction here
 file = open('../../../twitter_combined.txt')
 fileline = file.readlines()
 NODE2INDEX = {}
@@ -31,11 +32,11 @@ for line in fileline:
 		if index_v2 not in G[index_v1]:
 			G[index_v1].append(index_v2)
 try:
-	os.remove("twitter.txt")
+	os.remove("twitter"+str(node_index)+".txt")
 except OSError:
 	pass
 
-with open("twitter.txt","a") as myfile:
+with open("twitter"+str(node_index) +".txt","a") as myfile:
 	for i in range(node_index):
 		keyList = G[i]
 		currentList = list()
