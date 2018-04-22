@@ -1,6 +1,5 @@
 import os
 
-# change direction of file here
 file = open('../../../twitter_combined.txt')
 fileline = file.readlines()
 NODE2INDEX = {}
@@ -41,8 +40,9 @@ with open("twitter.txt","a") as myfile:
 		keyList = G[i]
 		currentList = list()
 		for k in range(node_index):
-			if k in keyList:
-				currentList.append(str(k))
+			if k not in keyList:
+				currentList.append(str(0))
+			else:
 				currentList.append(str(1))
 		line = " ".join(currentList)
 		line += "\n"
