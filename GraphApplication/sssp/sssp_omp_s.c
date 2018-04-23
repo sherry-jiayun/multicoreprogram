@@ -145,9 +145,9 @@ void sssp_m (int **graphmatric ){
 			}
 		}
 	}
-	for (int i = 0; i < numOfNode; ++i)
+	/*for (int i = 0; i < numOfNode; ++i)
 		printf("%d ",tent[i] );
-	printf("\n");
+	printf("\n");*/
 	
 }
 
@@ -205,9 +205,9 @@ void sssp_a (Node *head ){
 		}
 		// break;
 	}
-	for (int i = 0; i < numOfNode; ++i)
+	/*for (int i = 0; i < numOfNode; ++i)
 		printf("%d ",tent[i] );
-	printf("\n");
+	printf("\n");*/
 	
 }
 

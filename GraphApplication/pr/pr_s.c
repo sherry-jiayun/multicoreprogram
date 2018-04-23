@@ -6,6 +6,7 @@
 /*** global variable ***/
 
 int numOfNode;
+float sum_global;
 /***
 在头文件里引用 "loadgraph.h"
 用下面这一段当作main函数
@@ -37,8 +38,10 @@ int pagerankchack(float *prold, float *prnew, int numOfNode){
 		}
 		prold[i] = prnew[i];
 	}
-	printf("Sum: %f\n",sum );
-	if (sum < 0.0004) return 0;
+	// printf("Sum: %f, global: %f\n",sum, sum_global );
+	if (sum_global - sum < 0.000001 && sum_global - sum > -0.000001) return 0;
+	sum_global = sum;
+	// if (sum < 0.0004) return 0;
 	return 1;
 }
 void pagerankm(int **graphmatric){
@@ -149,6 +152,7 @@ int main(int argc, char *argv[])
 	char mode_adjlist[2];
 	strcpy(mode_matrix,"m");
 	strcpy(mode_adjlist,"l");
+	sum_global = -1;
 	if(argc == 4){
 		numOfNode = getInt(argv[1]);
 		if (numOfNode == -1){

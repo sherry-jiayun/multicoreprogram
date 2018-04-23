@@ -8,6 +8,7 @@
 
 int numOfNode;
 int numOfThread;
+float sum_global = -1;
 /***
 在头文件里引用 "loadgraph.h"
 用下面这一段当作main函数
@@ -39,8 +40,8 @@ int pagerankchack(float *prold, float *prnew, int numOfNode){
 		}
 		prold[i] = prnew[i];
 	}
-	printf("Sum: %f\n",sum );
-	if (sum < 0.0004) return 0;
+	if (sum_global - sum < 0.000001 && sum_global - sum > -0.000001) return 0;
+	sum_global = sum;
 	return 1;
 }
 void pagerankm(int **graphmatric){

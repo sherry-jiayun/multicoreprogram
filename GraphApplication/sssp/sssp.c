@@ -124,7 +124,6 @@ void sssp_m (int **graphmatric ){
 					}
 				}
 			}
-			printf("%d\n", loopnumber );
 			for (int j = 0; j < numOfNode; j++){
 				if (request_light[j] != 0){
 					relax(j,request_light[j]);
@@ -141,9 +140,9 @@ void sssp_m (int **graphmatric ){
 		}
 		// break;
 	}
-	for (int i = 0; i < numOfNode; ++i)
+	/*for (int i = 0; i < numOfNode; ++i)
 		printf("%d ",tent[i] );
-	printf("\n");
+	printf("\n");*/
 	
 }
 
@@ -196,9 +195,9 @@ void sssp_a (Node *head ){
 		}
 		// break;
 	}
-	for (int i = 0; i < numOfNode; ++i)
+	/*for (int i = 0; i < numOfNode; ++i)
 		printf("%d ",tent[i] );
-	printf("\n");
+	printf("\n");*/
 	
 }
 
@@ -238,7 +237,6 @@ int main(int argc, char *argv[])
 				createAdjList(nameOfFile,numOfNode,(Node *)&nodelist);
 				// loop to go through all list 
 				initialize_a((Node *)&nodelist);
-				printf("%d\n", delta);
 				sssp_a((Node *)&nodelist);
 			}else{
 				printf("Illegal mode!\n");
