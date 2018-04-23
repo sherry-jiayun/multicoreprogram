@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+/*** global variable ***/
+
+int numOfNode;
+float sum_global;
 /***
 在头文件里引用 "loadgraph.h"
 用下面这一段当作main函数
@@ -34,14 +38,17 @@ int pagerankchack(float *prold, float *prnew, int numOfNode){
 		}
 		prold[i] = prnew[i];
 	}
-	printf("Sum: %f\n",sum );
-	if (sum < 0.0004) return 0;
+	// printf("Sum: %f, global: %f\n",sum, sum_global );
+	if (sum_global - sum < 0.000001 && sum_global - sum > -0.000001) return 0;
+	sum_global = sum;
+	// if (sum < 0.0004) return 0;
 	return 1;
 }
-void pagerankm(int **graphmatric, int numOfNode){
+void pagerankm(int **graphmatric){
 	// iniitalize pagerank
 	float *pagerankinitial;
 	int *inouttable;
+	int iter = 0;
 	pagerankinitial = (float *)malloc(numOfNode * sizeof(float));
 	inouttable = malloc(numOfNode * sizeof(int));
 	float initializeNum = 1/(float)numOfNode;
@@ -59,6 +66,7 @@ void pagerankm(int **graphmatric, int numOfNode){
 	prnew = (float *)malloc(numOfNode * sizeof(float));
 	int checkResult = 1;
 	while (checkResult == 1){
+		iter++;
 		for (int i = 0; i < numOfNode; i++){
 			prnew[i] = 0;
 			for (int j = 0; j < numOfNode; j++){
@@ -71,16 +79,18 @@ void pagerankm(int **graphmatric, int numOfNode){
 		}
 		checkResult = pagerankchack(pagerankinitial,prnew,numOfNode);
 	}
-	for (int i = 0; i < numOfNode; i++){
+	/*for (int i = 0; i < numOfNode; i++){
 		printf("Node No.%d now: %f\n",i,pagerankinitial[i]);
-	}
+	}*/
+	printf("Iteration: %d\n",iter );
 }
-void pageranka(Node *head, int numOfNode){
+void pageranka(Node *head){
 
 	// initialize pagerank
 	Node a_node[numOfNode]; // reorganize adj list 
 	float *pagerankinitial; // initialize pr for every node
 	int *inouttable; // calculate inout edge num for each node 
+	int iter = 0;
 	pagerankinitial = (float *)malloc(numOfNode * sizeof(float));
 	inouttable = malloc(numOfNode * sizeof(int));
 	float initializeNum = 1/(float)numOfNode;
@@ -111,6 +121,7 @@ void pageranka(Node *head, int numOfNode){
 	prnew = (float *)malloc(numOfNode * sizeof(float));
 	int checkResult = 1;
 	while (checkResult == 1){
+		iter++;
 		for (int i = 0; i < numOfNode; i++){
 			prnew[i] = 0;
 			Node ntmp = (Node)a_node[i];
@@ -125,15 +136,15 @@ void pageranka(Node *head, int numOfNode){
 		}
 		checkResult = pagerankchack(pagerankinitial,prnew,numOfNode);
 	}
-	for (int i = 0; i < numOfNode; i++){
+	/* for (int i = 0; i < numOfNode; i++){
 		printf("Node No.%d now: %f\n",i,pagerankinitial[i]);
-	}
-
+	}*/ 
+	printf("Iteration: %d\n",iter );
 }
 
 int main(int argc, char *argv[])    
 {
-	int numOfNode;
+	
 	char *nameOfFile;
 	int index = 0;
 	char *mode;
@@ -141,6 +152,7 @@ int main(int argc, char *argv[])
 	char mode_adjlist[2];
 	strcpy(mode_matrix,"m");
 	strcpy(mode_adjlist,"l");
+	sum_global = -1;
 	if(argc == 4){
 		numOfNode = getInt(argv[1]);
 		if (numOfNode == -1){
@@ -157,14 +169,14 @@ int main(int argc, char *argv[])
 				graphmatric[index] = malloc(numOfNode * sizeof(int));
 			}
 			creatMatric(nameOfFile,numOfNode,graphmatric);
-			pagerankm(graphmatric,numOfNode);
+			pagerankm(graphmatric);
 			free(graphmatric);
 		}else{
 			result = strcmp(mode_adjlist,mode);
 			if (result == 0){
 				Node nodelist[numOfNode]; // number of node array
 				createAdjList(nameOfFile,numOfNode,(Node *)&nodelist);
-				pageranka((Node *)&nodelist, numOfNode);
+				pageranka((Node *)&nodelist);
 				
 			}else{
 				printf("Illegal mode!\n");
