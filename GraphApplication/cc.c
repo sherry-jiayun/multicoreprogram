@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <omp.h>
 
 /***
 在头文件里引用 "loadgraph.h"
@@ -23,8 +24,16 @@ typedef struct node
   Edge * edgehead;
 }Node;
 ***/
-void connectedComponents_m(int **graphmatric, int numOfNode);
-void connectedComponents_a(Node *nodelist, int numOfNode);
+
+//Global variable
+int numOfNode;
+
+void connectedComponents_m(int **graphmatric);
+void connectedComponents_a(Node *nodelist);
+void connectedComponents_a_parallel(Node *nodelist);
+void hook(int i, int j, int parent[numOfNode]);
+void star(int vertex, int star[numOfNode], int parent[numOfNode]);
+void connectedComponents_m_parallel(int **graphmatric);
 
 // A structure to represent a queue
 struct Queue
@@ -65,7 +74,7 @@ void enqueue(struct Queue* queue, int item)
     queue->rear = (queue->rear + 1)%queue->capacity;
     queue->array[queue->rear] = item;
     queue->size = queue->size + 1;
-    printf("%d enqueued to queue\n", item);
+    //printf("%d enqueued to queue\n", item);
 }
 
 //Function to add a node to the queue
@@ -75,7 +84,7 @@ void enqueueNode(struct Queue* queue, Node item) {
     queue->rear = (queue->rear + 1)%queue->capacity;
     queue->nodes[queue->rear] = item;
     queue->size = queue->size + 1;
-    printf("%d enqueued to queue\n", item.nodeNum);
+    //printf("%d enqueued to queue\n", item.nodeNum);
 }
  
 // Function to remove an item from queue. 
@@ -126,7 +135,7 @@ int main(int argc, char *argv[]) {
 	char *mode;
 	char mode_matrix[2];
 	char mode_adjlist[2];
-	int numOfNode;
+
 	strcpy(mode_matrix, "m");
 	strcpy(mode_adjlist, "l");
 	if(argc == 4){
@@ -152,15 +161,17 @@ int main(int argc, char *argv[]) {
 				//}
 				//printf("\n");
 			//}
-			//connectedComponents_m(graphmatric, numOfNode);
+			//connectedComponents_m(graphmatric);
+			connectedComponents_m_parallel(graphmatric);
 			free(graphmatric);
 		} else {
 			result = strcmp(mode_adjlist, mode);
 			if (result == 0) {
 				Node nodelist[numOfNode]; // number of node array
 				createAdjList(nameOfFile, numOfNode, (Node *) &nodelist);
-				// loop to go through all list 
-				for (int i = 0; i < numOfNode; i++) {
+				// loop to go through all list
+				int i; 
+				for (i = 0; i < numOfNode; i++) {
 					Node ntmp = (Node)nodelist[i];
 					Edge *etmp = (Edge *)ntmp.edgehead;
 					printf("Node num: %d\n", ntmp.nodeNum);
@@ -170,7 +181,8 @@ int main(int argc, char *argv[]) {
 					}
 					printf("\n");
 				}
-			connectedComponents_a(nodelist, numOfNode);	
+			//connectedComponents_a(nodelist);	
+			//connectedComponents_a_parallel(nodelist);
 			} else {
 				printf("Illegal mode!\n");
 				return 0;
@@ -183,71 +195,215 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 
-void connectedComponents_m(int **graphmatric, int numOfNode) {
+void connectedComponents_m(int **graphmatric) {
 	struct Queue* queue = createQueue(numOfNode);
-	int groups[numOfNode][numOfNode];
-	int groupIndex[numOfNode];
 	int visited[numOfNode];
-	int groupNum;
 	int i;
-	int j;
 	int node;
 
 	//initialization
 	for (i = 0; i < numOfNode; i++) {
 		visited[i] = 0;
-		groupIndex[i] = -1;
 	}
-	for (i = 0; i < numOfNode; i++) {
-		for (j = 0; j < numOfNode; j++) {
-			groups[i][j] = -1;
-		}
-	}
-	groupNum = 0;
-	groups[groupNum][0] = 0;
-	groupIndex[0] = groupNum;
 
 	for (node = 0; node < numOfNode; node++) {
-		if (!visited[i]) {
+		if (!visited[node]) {
 			//BFS
 			enqueue(queue, node);
+			printf("%d ", node);
 			visited[node] = 1;
 			while (!isEmpty(queue)) {
 				int current = dequeue(queue);
 				for (i = 0; i < numOfNode; i++) {
-					if (i != current && graphmatric[current][i] != 0 && visited[i] == 0) {
-						enqueue(queue, i);
-						visited[i] = 1;
-						if (groupIndex[current] != -1) {
-							int index = groupIndex[current];
-							int next = 0;
-							while (groups[index][next] != -1) {
-								next = next + 1;
-							}
-							groups[index][next] = i;
-							groupIndex[i] =index;
-						} else {
-							groupNum = groupNum + 1;
-							groups[groupNum][0] = current;
-							groupIndex[current] = groupNum;
-							groups[groupNum][1] = i;
-							groupIndex[i] = groupNum;
-						}
+					if (graphmatric[current][i] == 0 || visited[i] == 1) {
+						continue;
+					}
+					visited[i] = 1;
+					enqueue(queue, i);
+					printf("%d ", i);
+				}
+			}
+			printf("\n");
+		}
+	}
+}
+
+void connectedComponents_m_parallel(int **graphmatric) {
+	int parent[numOfNode];
+	int isStar[numOfNode];
+	int i;
+	int j;
+	int noChange = 0;
+
+	omp_set_num_threads(numOfNode);
+
+	//initialization
+	#pragma omp parallel num_threads (numOfNode)
+	for (i = 0; i < numOfNode; i++) {
+		parent[i] = i; 
+	}
+
+	for (i = 0; i < numOfNode; i++) {
+		#pragma omp parallel num_threads (numOfNode)
+		for (j = 0; j < numOfNode; j++) {
+			if(graphmatric[i][j] != 0) {
+				int from = i;
+                        	int to = j;
+				if (from > to) {
+					hook(from, to, parent);
+				}
+				if (parent[from] == from) {
+					hook(from, to, parent);
+				}
+			}
+		}
+	}
+	
+	while (!noChange) {
+		#pragma omp parallel num_threads (numOfNode)
+		for (i = 0; i < numOfNode; i++) {
+			star(i, isStar, parent);
+		}
+		for (i = 0; i < numOfNode; i++) {
+			#pragma omp parallel num_threads (numOfNode)
+			for (j = 0; j < numOfNode; j++) {	
+				if (graphmatric[i][j] != 0) {
+					int from = i;
+					int to = j;
+					if (isStar[from] && parent[from] > parent[to]) {
+						hook(from, to, parent);
 					}
 				}
 			}
 		}
-	}	
-
-	for (i = 0; i < numOfNode; i++) {
-		for (j = 0; j < numOfNode; j++) {
-			printf("%d ", groups[i][j]);
+		#pragma omp parallel num_threads (numOfNode)
+		for (i = 0; i < numOfNode; i++) {
+			star(i, isStar, parent);
 		}
-		printf("\n");
+		for (i = 0; i < numOfNode; i++) {
+			#pragma omp parallel num_threads (numOfNode)
+			for (j = 0; j < numOfNode; j++) {	
+				if (graphmatric[i][j] != 0) {
+					int from = i;
+					int to = j;
+					if (isStar[from] && parent[from] != parent[to]) {
+						hook(from, to, parent);
+					}
+				}
+			}
+		}
+		#pragma omp parallel num_threads (numOfNode)
+		for (i = 0; i < numOfNode; i++) {
+			noChange = 1;
+			if (parent[i] != parent[parent[i]]) {
+				parent[i] = parent[parent[i]];
+				noChange = 0;
+			}
+		}
+	}
+	
+	for (i = 0; i < numOfNode; i++) {
+		printf("Node: %d, Parent: %d\n", i, parent[i]);
 	}
 }
 
-void connectedComponents_a(Node *nodelist, int numOfNode) {
+void connectedComponents_a_parallel(Node *nodelist) {
+	int parent[numOfNode];
+	int isStar[numOfNode];
+	int i;
+	int noChange = 0;
+
+	omp_set_num_threads(numOfNode);
+
+	//initialization
+	#pragma omp parallel num_threads (numOfNode)
+	for (i = 0; i < numOfNode; i++) {
+		parent[i] = i; 
+	}
+
+	#pragma omp parallel num_threads (numOfNode)
+	for (i = 0; i < numOfNode; i++) {
+		Node curr = nodelist[i];
+		Edge *nextEdge = curr.edgehead;
+		while (nextEdge != NULL) {
+			int from = nextEdge->nodefrom;
+			int to = nextEdge->nodeto;
+			if (from > to) {
+				hook(from, to, parent);
+			}
+			if (parent[from] == from) {
+				hook(from, to, parent);
+			}
+			nextEdge = nextEdge->nextedge;
+		}
+	}
+	
+	while (!noChange) {
+		#pragma omp parallel num_threads (numOfNode)
+		for (i = 0; i < numOfNode; i++) {
+			star(i, isStar, parent);
+		}
+		#pragma omp parallel num_threads (numOfNode)
+		for (i = 0; i < numOfNode; i++) {
+			Node curr = nodelist[i];
+			Edge *nextEdge = curr.edgehead;
+			while (nextEdge != NULL) {
+				int from = nextEdge->nodefrom;
+				int to = nextEdge->nodeto;
+				if (isStar[from] && parent[from] > parent[to]) {
+					hook(from, to, parent);
+				}
+				nextEdge = nextEdge->nextedge;
+			}
+		}
+		#pragma omp parallel num_threads (numOfNode)
+		for (i = 0; i < numOfNode; i++) {
+			star(i, isStar, parent);
+		}
+		#pragma omp parallel num_threads (numOfNode)
+		for (i = 0; i < numOfNode; i++) {
+			Node curr = nodelist[i];
+			Edge *nextEdge = curr.edgehead;
+			while (nextEdge != NULL) {
+				int from = nextEdge->nodefrom;
+				int to = nextEdge->nodeto;
+				if (isStar[from] && parent[from] != parent[to]) {
+					hook(from, to, parent);
+				}
+				nextEdge = nextEdge->nextedge;
+			}
+		}
+		#pragma omp parallel num_threads (numOfNode)
+		for (i = 0; i < numOfNode; i++) {
+			noChange = 1;
+			if (parent[i] != parent[parent[i]]) {
+				parent[i] = parent[parent[i]];
+				noChange = 0;
+			}
+		}
+	}
+	
+	for (i = 0; i < numOfNode; i++) {
+		printf("Node: %d, Parent: %d\n", i, parent[i]);
+	}
+}
+
+void hook(int from, int to, int parent[numOfNode]) {
+	parent[parent[from]] = parent[to];
+}
+
+void star(int vertex, int star[numOfNode], int parent[numOfNode]) {
+	star[vertex] = 1;
+	if (parent[vertex] != parent[parent[vertex]]) {
+		star[vertex] = 0;
+		star[parent[parent[vertex]]] = 0;
+	}
+	if (star[parent[vertex]] == 0) {
+		star[vertex] = 0;
+	}
+}
+
+void connectedComponents_a(Node *nodelist) {
 	struct Queue* queue = createQueue(numOfNode);
 	int groups[numOfNode][numOfNode];
 	int groupIndex[numOfNode];
@@ -277,6 +433,7 @@ void connectedComponents_a(Node *nodelist, int numOfNode) {
 		start = (Node) nodelist[i];
 		if (!visited[start.nodeNum]) {
 			enqueueNode(queue, start);
+			printf("%d ", start.nodeNum);
 			visited[start.nodeNum] = 1;
 			while (!isEmpty(queue)) {
 				Node current = *dequeueNode(queue);
@@ -285,32 +442,12 @@ void connectedComponents_a(Node *nodelist, int numOfNode) {
 					Node nextNode = nodelist[(int)nextEdge->nodeto];
 					if (!visited[nextNode.nodeNum]) {
 						enqueueNode(queue, nextNode);
+						printf("%d ", nextNode.nodeNum);
 						visited[nextNode.nodeNum] = 1;
-						if (groupIndex[current.nodeNum] != -1) {
-							int index = groupIndex[current.nodeNum];
-							int next = 0;
-							while (groups[index][next] != -1) {
-								next = next + 1;
-							}
-							groups[index][next] = nextNode.nodeNum;
-							groupIndex[nextNode.nodeNum] =index;
-						} else {
-							groupNum = groupNum + 1;
-							groups[groupNum][0] = current.nodeNum;
-							groupIndex[current.nodeNum] = groupNum;
-							groups[groupNum][1] = nextNode.nodeNum;
-							groupIndex[nextNode.nodeNum] = groupNum;
-						}
 						nextEdge = nextEdge->nextedge;
 					}
 				}
 			}
-		}
-	}
-
-	for (i = 0; i < numOfNode; i++) {
-		for (j = 0; j < numOfNode; j++) {
-			printf("%d ", groups[i][j]);
 		}
 		printf("\n");
 	}
