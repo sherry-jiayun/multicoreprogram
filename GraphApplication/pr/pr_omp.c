@@ -173,6 +173,7 @@ int main(int argc, char *argv[])
 		mode = argv[3];
 		numOfThread = getInt(argv[4]);
 		int result = strcmp(mode_matrix,mode);
+		omp_set_num_threads(numOfThread);
 		if (result == 0){
 			int **graphmatric; // numOfNode * numOfNode matrix 
 			graphmatric = malloc(numOfNode * sizeof *graphmatric);

@@ -103,15 +103,22 @@ void sssp_m (int **graphmatric ){
 	relax(0,0);
 	int request_light[numOfNode];
 	int request_heavy[numOfNode];
-	memset(&request_light,0,sizeof(int) * numOfNode);
-	memset(&request_heavy,0,sizeof(int) * numOfNode);
+	memset(&request_light,999999,sizeof(int) * numOfNode);
+	memset(&request_heavy,999999,sizeof(int) * numOfNode);
 	for (int i = 0; i < 2; i++){
 		int s[numOfNode];
 		memset(&s, -1, sizeof(int) * numOfNode);
 		int index_s = 0;
 		while (B[i][0] != -1){
+			int global_test = 0;
 			#pragma omp parallel
 			{
+				int tid = omp_get_thread_num();
+				int request_light_local[numOfNode];
+				memset(&request_light_local,999999,sizeof(int) * numOfNode);
+				int request_heavy_local[numOfNode];
+				memset(&request_heavy_local,999999,sizeof(int) * numOfNode);
+				
 				#pragma omp for
 				for (int j = 0; j < numOfNode; j++){
 					if (B[i][j] != -1){
@@ -120,34 +127,42 @@ void sssp_m (int **graphmatric ){
 						s[index_s++] = index;
 						for (int k = 0; k < numOfNode; k++){
 							if (graphmatric[index][k] != 0 && (graphmatric[index][k] - 1) / delta == 0){
-								if (request_light[k] == 0 || request_light[k] > tent[index] + graphmatric[index][k])
-									request_light[k] = tent[index] + graphmatric[index][k];
+								if (request_light_local[k] == 0 || request_light_local[k] > tent[index] + graphmatric[index][k])
+									request_light_local[k] = tent[index] + graphmatric[index][k];
 							}else if (graphmatric[index][k] != 0){
-								if (request_heavy[k] == 0 || request_heavy[k] > tent[index] + graphmatric[index][k])
-									request_heavy[k] = tent[index] + graphmatric[index][k];
+								if (request_heavy_local[k] == 0 || request_heavy_local[k] > tent[index] + graphmatric[index][k])
+									request_heavy_local[k] = tent[index] + graphmatric[index][k];
 							}
 						}
 					}
 				}
+				#pragma omp critical
+				{
+					for (int j = 0; j < numOfNode;j++){
+						if (request_light_local[j] < request_light[j])
+							request_light[j] = request_light_local[j];
+						if (request_heavy_local[j] < request_heavy[j])
+							request_heavy[j] = request_heavy_local[j];
+					}
+				}
 			}
-			
 			for (int j = 0; j < numOfNode; j++){
-				if (request_light[j] != 0){
+				if (request_light[j] != 999999){
 					relax(j,request_light[j]);
-					request_light[j] = 0;
+					request_light[j] = 999999;
 				}
 			}
 		}
 		for (int j = 0; j < numOfNode; j++){
-			if (request_heavy[j] != 0){
+			if (request_heavy[j] != 999999){
 				relax(j, request_heavy[j]);
-				request_heavy[j] = 0;
+				request_heavy[j] = 999999;
 			}
 		}
 	}
-	/*for (int i = 0; i < numOfNode; ++i)
+	for (int i = 0; i < numOfNode; ++i)
 		printf("%d ",tent[i] );
-	printf("\n");*/
+	printf("\n");
 	
 }
 
@@ -157,8 +172,8 @@ void sssp_a (Node *head ){
 	int request_heavy[numOfNode];
 	int nodetoindex;
 	int weight;
-	memset(&request_light,0,sizeof(int) * numOfNode);
-	memset(&request_heavy,0,sizeof(int) * numOfNode);
+	memset(&request_light,999999,sizeof(int) * numOfNode);
+	memset(&request_heavy,999999,sizeof(int) * numOfNode);
 	for (int i = 0; i < 2; i++){
 		int s[numOfNode];
 		memset(&s, -1, sizeof(int) * numOfNode);
@@ -166,6 +181,12 @@ void sssp_a (Node *head ){
 		while (B[i][0] != -1){
 			#pragma omp parallel
 			{
+				int tid = omp_get_thread_num();
+				int request_light_local[numOfNode];
+				memset(&request_light_local,999999,sizeof(int) * numOfNode);
+				int request_heavy_local[numOfNode];
+				memset(&request_heavy_local,999999,sizeof(int) * numOfNode);
+
 				#pragma omp for
 				for (int j = 0; j < numOfNode; j++){
 					if (B[i][j] != -1){
@@ -178,36 +199,45 @@ void sssp_a (Node *head ){
 							nodetoindex = etmp->nodeto;
 							weight = etmp->weight;
 							if ((weight-1)/delta == 0) {
-								if (request_light[nodetoindex] == 0 || request_light[nodetoindex] > tent[index] + weight)
-									request_light[nodetoindex] = tent[index] + weight;
+								if (request_light_local[nodetoindex] == 0 || request_light_local[nodetoindex] > tent[index] + weight)
+									request_light_local[nodetoindex] = tent[index] + weight;
 							}else{
-								if (request_heavy[nodetoindex] == 0 || request_heavy[nodetoindex] > tent[index] + weight)
-									request_heavy[nodetoindex] = tent[index] + weight;
+								if (request_heavy_local[nodetoindex] == 0 || request_heavy_local[nodetoindex] > tent[index] + weight)
+									request_heavy_local[nodetoindex] = tent[index] + weight;
 							}  
 							etmp = etmp->nextedge;
 						}
 					}
 				}
+				#pragma omp critical
+				{
+					for (int j = 0; j < numOfNode;j++){
+						if (request_light_local[j] < request_light[j])
+							request_light[j] = request_light_local[j];
+						if (request_heavy_local[j] < request_heavy[j])
+							request_heavy[j] = request_heavy_local[j];
+					}
+				}
 			}
 			for (int j = 0; j < numOfNode; j++){
-				if (request_light[j] != 0){
+				if (request_light[j] != 999999){
 					relax(j,request_light[j]);
-					request_light[j] = 0;
+					request_light[j] = 999999;
 				}
 			}
 			// break;
 		}
 		for (int j = 0; j < numOfNode; j++){
-			if (request_heavy[j] != 0){
+			if (request_heavy[j] != 999999){
 				relax(j, request_heavy[j]);
-				request_heavy[j] = 0;
+				request_heavy[j] = 999999;
 			}
 		}
 		// break;
 	}
-	/*for (int i = 0; i < numOfNode; ++i)
+	for (int i = 0; i < numOfNode; ++i)
 		printf("%d ",tent[i] );
-	printf("\n");*/
+	printf("\n");
 	
 }
 
@@ -250,6 +280,7 @@ int main(int argc, char *argv[])
 				createAdjList(nameOfFile,numOfNode,(Node *)&nodelist);
 				// loop to go through all list 
 				initialize_a((Node *)&nodelist);
+				printf("%d\n", delta);
 				sssp_a((Node *)&nodelist);
 			}else{
 				printf("Illegal mode!\n");

@@ -226,13 +226,7 @@ int main(int argc, char *argv[])
 			for (;index < numOfNode;index++){
 				graphmatric[index] = malloc(numOfNode * sizeof(int));
 			}
-			if (my_rank == 0){
-				creatMatric(nameOfFile,numOfNode,graphmatric);
-			}
-			for (int i = 0; i < numOfNode; i ++){
-				MPI_Bcast(graphmatric[i], numOfNode, MPI_INT, 0, MPI_COMM_WORLD);
-				MPI_Barrier(MPI_COMM_WORLD);
-			}
+			creatMatric(nameOfFile,numOfNode,graphmatric);
 			pagerankm(graphmatric,comm_sz,my_rank);
 			free(graphmatric);
 		}else{

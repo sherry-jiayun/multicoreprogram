@@ -169,10 +169,10 @@ void bfs_a(Node *head){
 				visited[nltmp] = 0;
 			}
 		}
-		for (int i = 0; worklist[i] != -1; i++){
+		/*for (int i = 0; worklist[i] != -1; i++){
 			printf("%d ",worklist[i] );
 		}
-		printf("\n");
+		printf("\n");*/
 	}
 }
 

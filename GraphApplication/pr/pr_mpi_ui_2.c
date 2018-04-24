@@ -30,15 +30,11 @@ typedef struct node
 ***/
 int pagerankchack(float *prold, float *prnew, int numOfNode, int work_per_processor, int comm_sz){
 	float sum = 0;
-	for (int i = 0; i < comm_sz; i++){
-		for (int j = 0; j < work_per_processor; j++){
-			int localindex = i * work_per_processor + j;
-			if (localindex >= numOfNode) break;
-			float sumtmp = prold[localindex] - prnew[localindex];
-			if (sumtmp < 0) sum -= sumtmp;
-			else sum += sumtmp;
-			prold[localindex] = prnew[localindex];
-		}
+	for (int i = 0; i < numOfNode; i++){
+		float sumtmp = prold[i] - prnew[i];
+		if (sumtmp < 0) sum -= sumtmp;
+		else sum += sumtmp;
+		prold[i] = prnew[i];
 	}
 	// printf("sum: %f\n", sum );
 	if (sum_global - sum < 0.000001 && sum_global - sum > -0.000001) return 0;
@@ -56,11 +52,11 @@ void pagerankm(int **graphmatric, int comm_sz, int my_rank){
 	int *inouttable_local;
 	int work_per_processor = numOfNode / comm_sz;
 	/* deal with 100 / 40 situation */
-	if (work_per_processor * comm_sz < numOfNode) work_per_processor++;
+	// if (work_per_processor * comm_sz < numOfNode) work_per_processor++;
 	pagerankinitial_local = (float *)malloc(work_per_processor * sizeof(float));
 	inouttable_local = malloc(work_per_processor * sizeof(int));
-	pagerankinitial_global = (float *)malloc(work_per_processor * comm_sz * sizeof(float));
-	inouttable_global = malloc(work_per_processor * comm_sz * sizeof(int));
+	pagerankinitial_global = (float *)malloc(numOfNode* sizeof(float));
+	inouttable_global = malloc(numOfNode * sizeof(int));
 
 	float initializeNum = 1/(float)numOfNode;
 	for (int i = 0; i < work_per_processor; i++){
@@ -78,12 +74,27 @@ void pagerankm(int **graphmatric, int comm_sz, int my_rank){
 		// printf("Node No.%d out route number %d from rank %d \n",i,inouttable_local[i],my_rank );
 	}
 
-	MPI_Allgather(pagerankinitial_local, work_per_processor, MPI_FLOAT, pagerankinitial_global, work_per_processor,MPI_FLOAT,MPI_COMM_WORLD);
-	MPI_Allgather(inouttable_local,work_per_processor,MPI_INT, inouttable_global,work_per_processor,MPI_INT,MPI_COMM_WORLD);
+	MPI_Gather(pagerankinitial_local, work_per_processor, MPI_FLOAT, pagerankinitial_global, work_per_processor,MPI_FLOAT,0,MPI_COMM_WORLD);
+	MPI_Gather(inouttable_local,work_per_processor,MPI_INT, inouttable_global,work_per_processor,MPI_INT,0,MPI_COMM_WORLD);
+	if (my_rank == 0){
+		for (int i = work_per_processor * comm_sz; i < numOfNode; i++){
+			pagerankinitial_global[i] = initializeNum;
+			inouttable_global[i] = 0;
+			for (int j = 0; j < numOfNode; j++){
+				if (graphmatric[i][j] != 0){
+					inouttable_global[i] += 1;
+				}
+			}
+		}
+	}
+	MPI_Bcast(pagerankinitial_global, numOfNode,MPI_FLOAT,0, MPI_COMM_WORLD);
+	MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Bcast(inouttable_global,numOfNode,MPI_INT,0,MPI_COMM_WORLD);
+	MPI_Barrier(MPI_COMM_WORLD);
 
 	float *prnew_global;
 	float *prnew_local;
-	prnew_global = (float *)malloc(work_per_processor * comm_sz * sizeof(float));
+	prnew_global = (float *)malloc(numOfNode * sizeof(float));
 	prnew_local = (float *)malloc(work_per_processor * sizeof(float));
 	int checkResult = 1;
 	while (checkResult == 1){
@@ -100,10 +111,24 @@ void pagerankm(int **graphmatric, int comm_sz, int my_rank){
 					// printf("%f for index %d from rank %d\n",prnew_local[i],i,my_rank );
 				}
 			}
-			// printf("Node No.%d old: %f new: %f\n",i,pagerankinitial_global[i],prnew_local[i] );
+			// printf("Node No.%d old: %f new: %f from rank %d \n",i,pagerankinitial_global[i],prnew_local[i],my_rank );
 		}
-		MPI_Allgather(prnew_local, work_per_processor, MPI_FLOAT, prnew_global,work_per_processor, MPI_FLOAT,MPI_COMM_WORLD);
+		MPI_Gather(prnew_local, work_per_processor, MPI_FLOAT, prnew_global,work_per_processor, MPI_FLOAT,0,MPI_COMM_WORLD);
+		if (my_rank == 0){
+			for (int i = work_per_processor * comm_sz; i < numOfNode; i++){
+				prnew_global[i] = 0;
+				for (int j = 0; j < numOfNode; j++){
+					if (graphmatric[j][i] != 0){
+						prnew_global[i] += pagerankinitial_global[j]/inouttable_global[j];
+					}
+				}
+				// printf("Node No.%d old: %f new: %f from rank %d \n",i,pagerankinitial_global[i],prnew_global[i],my_rank );
+			}
+		}
+		MPI_Bcast(prnew_global, numOfNode, MPI_FLOAT, 0, MPI_COMM_WORLD);
+		MPI_Barrier(MPI_COMM_WORLD);
 		checkResult = pagerankchack(pagerankinitial_global,prnew_global,numOfNode,work_per_processor,comm_sz);
+		//break;
 	}
 	if (my_rank == 0){
 		printf("Iteration: %d\n",iter );

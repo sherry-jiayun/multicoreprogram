@@ -48,7 +48,7 @@ void bfs_m(int **graphmatric, int comm_sz, int my_rank){
 	// printf("%d\n", checkWorkList() );
 	while (checkWorkList() == 1 ){
 		int num_per_processor = startpoint / comm_sz; // work for every processor
-		if (num_per_processor * comm_sz < startpoint) num_per_processor++; 
+		// if (num_per_processor * comm_sz < startpoint) num_per_processor++; 
 		int nextlevel[numOfNode];
 		memset(&nextlevel, -1, sizeof(int) * numOfNode);
 		for(int i = 0; i < num_per_processor; i++){
@@ -63,6 +63,25 @@ void bfs_m(int **graphmatric, int comm_sz, int my_rank){
 							break;
 						}else if (nextlevel[k] == j){
 							break;
+						}
+					}
+				}
+			}
+		}
+		if (my_rank == 0){
+			for (int i = num_per_processor * comm_sz; i < startpoint; i++){
+				int realindex = i;
+				if (realindex >= startpoint) break;
+				int currentIndex = worklist[realindex];
+				for (int j = 0; j < numOfNode; j++){
+					if (graphmatric[currentIndex][j] != 0 && visited[j] == -1){
+						for (int k = 0; k < numOfNode; k++){
+							if (nextlevel[k] == -1){
+								nextlevel[k] = j;
+								break;
+							}else if (nextlevel[k] == j){
+								break;
+							}
 						}
 					}
 				}
@@ -141,10 +160,10 @@ void bfs_a(Node *head,int comm_sz, int my_rank){
 				}
 			}
 		}
-		/*for (int i = 0; worklist[i] != -1; i++){
+		for (int i = 0; worklist[i] != -1; i++){
 			printf("%d ",worklist[i] );
 		}
-		printf("\n");*/
+		printf("\n");
 	}
 }
 int main(int argc, char *argv[])    
@@ -177,7 +196,7 @@ int main(int argc, char *argv[])
 			int **graphmatric; // numOfNode * numOfNode matrix 
 			graphmatric = malloc(numOfNode * sizeof *graphmatric);
 			for (;index < numOfNode;index++){
-			graphmatric[index] = malloc(numOfNode * sizeof(int));
+				graphmatric[index] = malloc(numOfNode * sizeof(int));
 			}
 			if (my_rank == 0){
 				creatMatric(nameOfFile,numOfNode,graphmatric);

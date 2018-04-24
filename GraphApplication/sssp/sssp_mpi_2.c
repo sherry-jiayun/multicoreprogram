@@ -230,11 +230,6 @@ void sssp_a (Node *head, int comm_sz, int my_rank ){
 		}
 		// break;
 	}
-	if (my_rank == 0){
-		for (int i = 0; i < numOfNode; ++i)
-			printf("%d ",tent[i] );
-		printf("\n");
-	}
 }
 
 int main(int argc, char *argv[])    
@@ -269,13 +264,7 @@ int main(int argc, char *argv[])
 			for (;index < numOfNode;index++){
 			graphmatric[index] = malloc(numOfNode * sizeof(int));
 			}
-			if (my_rank == 0){
-				creatMatric(nameOfFile,numOfNode,graphmatric);
-			}
-			for (int i = 0; i < numOfNode; i ++){
-				MPI_Bcast(graphmatric[i], numOfNode, MPI_INT, 0, MPI_COMM_WORLD);
-				MPI_Barrier(MPI_COMM_WORLD);
-			}
+			creatMatric(nameOfFile,numOfNode,graphmatric);
 			initialize(graphmatric);
 			sssp_m(graphmatric,comm_sz,my_rank);
 			// dijkstra(graphmatric, numOfNode);
@@ -287,7 +276,6 @@ int main(int argc, char *argv[])
 				createAdjList(nameOfFile,numOfNode,(Node *)&nodelist);
 				// loop to go through all list 
 				initialize_a((Node *)&nodelist);
-				printf("%d\n", delta);
 				sssp_a((Node *)&nodelist,comm_sz,my_rank);
 			}else{
 				printf("Illegal mode!\n");

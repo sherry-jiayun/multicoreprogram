@@ -101,7 +101,7 @@ void sssp_m (int **graphmatric, int comm_sz, int my_rank ){
 	relax(0,0);
 
 	int work_per_processor = numOfNode / comm_sz;
-	if (work_per_processor * comm_sz < numOfNode) work_per_processor++;
+	// if (work_per_processor * comm_sz < numOfNode) work_per_processor++;
 
 	// initialize 
 	int request_light_local[numOfNode];
@@ -134,6 +134,23 @@ void sssp_m (int **graphmatric, int comm_sz, int my_rank ){
 					}else if (graphmatric[index][k] != 0){
 						if (request_heavy_local[k] == 0 || request_heavy_local[k] > tent[index] + graphmatric[index][k])
 							request_heavy_local[k] = tent[index] + graphmatric[index][k];
+					}
+				}
+			}
+			if (my_rank == 0){
+				for (int j = work_per_processor * comm_sz; j < numOfNode; j++){
+					if (B[i][j] == -1) break;
+					index = B[i][j];
+					B[i][j] = -1;
+					s[index_s++] = index;
+					for (int k = 0; k < numOfNode; k++){
+						if (graphmatric[index][k] != 0 && (graphmatric[index][k] - 1) / delta == 0){
+							if (request_light_local[k] == 0 || request_light_local[k] > tent[index] + graphmatric[index][k])
+								request_light_local[k] = tent[index] + graphmatric[index][k];
+						}else if (graphmatric[index][k] != 0){
+							if (request_heavy_local[k] == 0 || request_heavy_local[k] > tent[index] + graphmatric[index][k])
+								request_heavy_local[k] = tent[index] + graphmatric[index][k];
+						}
 					}
 				}
 			}
