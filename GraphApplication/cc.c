@@ -27,6 +27,7 @@ typedef struct node
 
 //Global variable
 int numOfNode;
+int numOfThreads;
 
 void connectedComponents_m(int **graphmatric);
 void connectedComponents_a(Node *nodelist);
@@ -138,8 +139,9 @@ int main(int argc, char *argv[]) {
 
 	strcpy(mode_matrix, "m");
 	strcpy(mode_adjlist, "l");
-	if(argc == 4){
+	if(argc == 5){
 		numOfNode = getInt(argv[1]);
+		numOfThreads = getInt(argv[4]);
 		if (numOfNode == -1){
 			printf("Illegal number of city %s\n", argv[1] );
 			return 0;
@@ -235,16 +237,16 @@ void connectedComponents_m_parallel(int **graphmatric) {
 	int j;
 	int noChange = 0;
 
-	omp_set_num_threads(numOfNode);
+	omp_set_num_threads(numOfThreads);
 
 	//initialization
-	#pragma omp parallel num_threads (numOfNode)
+	#pragma omp parallel num_threads (numOfThreads)
 	for (i = 0; i < numOfNode; i++) {
 		parent[i] = i; 
 	}
 
 	for (i = 0; i < numOfNode; i++) {
-		#pragma omp parallel num_threads (numOfNode)
+		#pragma omp parallel num_threads (numOfThreads)
 		for (j = 0; j < numOfNode; j++) {
 			if(graphmatric[i][j] != 0) {
 				int from = i;
@@ -260,12 +262,12 @@ void connectedComponents_m_parallel(int **graphmatric) {
 	}
 	
 	while (!noChange) {
-		#pragma omp parallel num_threads (numOfNode)
+		#pragma omp parallel num_threads (numOfThreads)
 		for (i = 0; i < numOfNode; i++) {
 			star(i, isStar, parent);
 		}
 		for (i = 0; i < numOfNode; i++) {
-			#pragma omp parallel num_threads (numOfNode)
+			#pragma omp parallel num_threads (numOfThreads)
 			for (j = 0; j < numOfNode; j++) {	
 				if (graphmatric[i][j] != 0) {
 					int from = i;
@@ -276,12 +278,12 @@ void connectedComponents_m_parallel(int **graphmatric) {
 				}
 			}
 		}
-		#pragma omp parallel num_threads (numOfNode)
+		#pragma omp parallel num_threads (numOfThreads)
 		for (i = 0; i < numOfNode; i++) {
 			star(i, isStar, parent);
 		}
 		for (i = 0; i < numOfNode; i++) {
-			#pragma omp parallel num_threads (numOfNode)
+			#pragma omp parallel num_threads (numOfThreads)
 			for (j = 0; j < numOfNode; j++) {	
 				if (graphmatric[i][j] != 0) {
 					int from = i;
@@ -292,7 +294,7 @@ void connectedComponents_m_parallel(int **graphmatric) {
 				}
 			}
 		}
-		#pragma omp parallel num_threads (numOfNode)
+		#pragma omp parallel num_threads (numOfThreads)
 		for (i = 0; i < numOfNode; i++) {
 			noChange = 1;
 			if (parent[i] != parent[parent[i]]) {
@@ -313,15 +315,15 @@ void connectedComponents_a_parallel(Node *nodelist) {
 	int i;
 	int noChange = 0;
 
-	omp_set_num_threads(numOfNode);
+	omp_set_num_threads(numOfThreads);
 
 	//initialization
-	#pragma omp parallel num_threads (numOfNode)
+	#pragma omp parallel num_threads (numOfThreads)
 	for (i = 0; i < numOfNode; i++) {
 		parent[i] = i; 
 	}
 
-	#pragma omp parallel num_threads (numOfNode)
+	#pragma omp parallel num_threads (numOfThreads)
 	for (i = 0; i < numOfNode; i++) {
 		Node curr = nodelist[i];
 		Edge *nextEdge = curr.edgehead;
@@ -339,11 +341,11 @@ void connectedComponents_a_parallel(Node *nodelist) {
 	}
 	
 	while (!noChange) {
-		#pragma omp parallel num_threads (numOfNode)
+		#pragma omp parallel num_threads (numOfThreads)
 		for (i = 0; i < numOfNode; i++) {
 			star(i, isStar, parent);
 		}
-		#pragma omp parallel num_threads (numOfNode)
+		#pragma omp parallel num_threads (numOfThreads)
 		for (i = 0; i < numOfNode; i++) {
 			Node curr = nodelist[i];
 			Edge *nextEdge = curr.edgehead;
@@ -356,11 +358,11 @@ void connectedComponents_a_parallel(Node *nodelist) {
 				nextEdge = nextEdge->nextedge;
 			}
 		}
-		#pragma omp parallel num_threads (numOfNode)
+		#pragma omp parallel num_threads (numOfThreads)
 		for (i = 0; i < numOfNode; i++) {
 			star(i, isStar, parent);
 		}
-		#pragma omp parallel num_threads (numOfNode)
+		#pragma omp parallel num_threads (numOfThreads)
 		for (i = 0; i < numOfNode; i++) {
 			Node curr = nodelist[i];
 			Edge *nextEdge = curr.edgehead;
@@ -373,7 +375,7 @@ void connectedComponents_a_parallel(Node *nodelist) {
 				nextEdge = nextEdge->nextedge;
 			}
 		}
-		#pragma omp parallel num_threads (numOfNode)
+		#pragma omp parallel num_threads (numOfThreads)
 		for (i = 0; i < numOfNode; i++) {
 			noChange = 1;
 			if (parent[i] != parent[parent[i]]) {
@@ -405,28 +407,15 @@ void star(int vertex, int star[numOfNode], int parent[numOfNode]) {
 
 void connectedComponents_a(Node *nodelist) {
 	struct Queue* queue = createQueue(numOfNode);
-	int groups[numOfNode][numOfNode];
-	int groupIndex[numOfNode];
 	int visited[numOfNode];
-	int groupNum;
 	int i;
-	int j;
 
 	//initialization
 	for (i = 0; i < numOfNode; i++) {
 		visited[i] = 0;
-		groupIndex[i] = -1;
-	}
-	for (i = 0; i < numOfNode; i++) {
-		for (j = 0; j < numOfNode; j++) {
-			groups[i][j] = -1;
-		}
 	}
 
 	Node start = (Node) nodelist[0];
-	groupNum = 0;
-	groups[groupNum][0] = start.nodeNum;
-	groupIndex[start.nodeNum] = groupNum;
 
 	for (i = 0 ; i < numOfNode; i++) {
 		//BFS
